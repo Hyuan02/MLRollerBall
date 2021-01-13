@@ -13,16 +13,19 @@ public class RollerLabyrinthAgent : Agent
     [SerializeField]
     Transform target;
     [SerializeField]
-    [Range(1, 10)]
+    [Range(1, 100)]
     float forceMultiplier = 1;
 
 
     float actualPathDistance;
+    float previousPathDistance;
+
+    Collider[] hitWallColliders;
 
     [SerializeField]
     Vector3 defaultRollerPosition = new Vector3(26.5f, 0.6f, 22.7f);
 
-    readonly Vector3 defaultTargetPosition = new Vector3(82.2f, 0.6f, 27.5f);
+    readonly Vector3 defaultTargetPosition = new Vector3(82.2f, 2.08f, 27.5f);
 
     // Start is called before the first frame update
     void Start()
@@ -44,11 +47,11 @@ public class RollerLabyrinthAgent : Agent
     public override void CollectObservations(VectorSensor sensor)
     {
         //sensor.AddObservation(target.position);
-        //sensor.AddObservation(this.transform.position);
+        sensor.AddObservation(this.transform.position);
         sensor.AddObservation(this.rbody.velocity.x);
         sensor.AddObservation(this.rbody.velocity.z);
         sensor.AddObservation(actualPathDistance);
-        //sensor.AddObservation((this.target.position - this.transform.position).normalized);
+        sensor.AddObservation((this.target.position - this.transform.position).normalized);
     }
 
     public override void OnActionReceived(float[] vectorAction)
@@ -71,20 +74,46 @@ public class RollerLabyrinthAgent : Agent
         NavMeshPath path = new NavMeshPath();
         bool result = NavMesh.CalculatePath(this.transform.position, target.transform.position, NavMesh.AllAreas, path);
 
-        print("The path is: " + result);
+        //print("The path is: " + result);
         if (result)
         {
+
             actualPathDistance = GetPathLength(path);
-            print("Distance: " + actualPathDistance);
+
+            if(previousPathDistance != 0)
+            {
+                if(actualPathDistance < previousPathDistance)
+                {
+                    AddReward(0.01f);
+                }
+                else
+                {
+                    AddReward(-0.1f);
+                }
+            }
+            previousPathDistance = actualPathDistance;
+            //print("Distance: " + actualPathDistance);
         }
 
+        hitWallColliders = new Collider[1];
+        Physics.OverlapSphereNonAlloc(this.transform.position, 2f, hitWallColliders);
+
+        foreach(Collider wall in hitWallColliders)
+        {
+            if (wall.CompareTag("Walls"))
+            {
+                AddReward(-0.1f);
+                
+            }
+        }
 
         //Rewards
-        //float distanceToTarget = Vector3.Distance(this.transform.localPosition, target.localPosition);
+        float distanceToTarget = Vector3.Distance(this.transform.localPosition, target.localPosition);
 
-        if(actualPathDistance < 5f)
+        if (distanceToTarget < 5f)
         {
-            SetReward(1.0f);
+            SetReward(1000.0f);
+            Debug.Log("Founded");
             EndEpisode();
         }
 
