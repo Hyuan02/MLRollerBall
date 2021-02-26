@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Walls
   - Target
+  - RedPill
+  - GreenPill
+  - Agent
   layers:
   - Default
   - TransparentFX
